@@ -1,0 +1,75 @@
+---
+const SHEET_ID = '12QBZHTDjAZg35NkGHappq2AiwdGf40RdxVb7zxXRwuE';
+const boardUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=기술자료`;
+const boardRes = await fetch(boardUrl);
+const boardText = await boardRes.text();
+const boardJson = JSON.parse(boardText.substring(47, boardText.length - 2));
+let bRows = (boardJson.table.rows || []).filter(r => r.c && r.c[0]?.v && r.c[0].v !== '분류');
+
+let htmlBoardNotice = '';
+bRows.reverse().forEach((r, originalIndex) => {
+  const c = r.c;
+  if (!c || !c[0]) return;
+  const category = c[0]?.v || '';
+  const title = c[1]?.v || c[1]?.f || '제목 없음';
+  const date = c[2]?.f || c[2]?.v || '날짜 없음';
+  
+  if (category === '공지사항') {
+    htmlBoardNotice += `<tr><td>${category}</td><td class="b-title" onclick="location.href='/board/${originalIndex}'">${title}</td><td>${date}</td></tr>`;
+  }
+});
+---
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>(주)엠밸리테크 - 고객센터</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  body { background-color: #f8fafc; color: #333; line-height: 1.6; }
+  .layer-1 { width: 100%; background-color: #ffffff; border-bottom: 2px solid #0f4c81; }
+  .main-banner { width: 100%; height: 250px; background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('https://raw.githubusercontent.com/GlassBird210/mvalleytech/main/mainbanner.jpg') center/cover no-repeat; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; text-align: center; cursor: pointer; }
+  .main-banner h1 { font-size: 42px; font-weight: 500; }
+  .main-banner p { font-size: 24px; font-weight: 300; margin-top: 8px; opacity: 0.9; }
+  .gnb-menu { display: flex; justify-content: center; background-color: #0f4c81; flex-wrap: wrap; }
+  .gnb-btn { padding: 14px 24px; color: #ffffff; background: transparent; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; text-decoration: none; }
+  .gnb-btn:hover, .gnb-btn.active { background-color: #0b3860; color: #ffd700; }
+  .layer-3 { width: 100%; padding: 50px 20px; max-width: 1200px; margin: 0 auto; min-height: 500px; }
+  :global(.board-table) { width: 100%; border: 1px solid #e2e8f0; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-top: 15px; }
+  :global(.board-table th) { border: 1px solid #e2e8f0; background: #0f4c81; color: #fff; padding: 14px; font-size: 14.5px; font-weight: 600; text-align: center; }
+  :global(.board-table td) { border: 1px solid #e2e8f0; padding: 14px; border-bottom: 1px solid #e2e8f0; text-align: center; font-size: 14px; color: #334155; }
+  :global(.board-table td.b-title) { text-align: left; font-weight: 500; cursor: pointer; transition: color 0.2s; }
+  :global(.board-table td.b-title:hover) { color: #0284c7; text-decoration: underline; }
+  footer { background-color: #1e293b; color: #94a3b8; padding: 40px 20px; font-size: 13px; border-top: 1px solid #334155; text-align: center; margin-top: 50px; }
+</style>
+</head>
+<body>
+  <div class="layer-1">
+    <div class="main-banner" onclick="location.href='/'">
+      <h1>(주)엠밸리테크</h1>
+      <p>세계일류를 꿈꾸는, 능동적이고 적극적인 개척정신</p>
+    </div>
+    <div class="gnb-menu">
+      <button class="gnb-btn" onclick="location.href='/category/all'">제품소개</button>
+      <button class="gnb-btn" onclick="location.href='/board/category/all'">기술자료</button>
+      <button class="gnb-btn" onclick="location.href='/quote'">견적문의</button>
+      <button class="gnb-btn active" onclick="location.href='/cs'">고객센터</button>
+      <button class="gnb-btn" onclick="location.href='/about'">회사소개</button>
+    </div>
+  </div>
+
+  <div class="layer-3">
+    <h2 style="color:#0f4c81; margin-bottom:15px;">공지사항</h2>
+    <table class="board-table">
+      <thead><tr><th style="width:10%;">분류</th><th>제목</th><th style="width:15%;">작성일</th></tr></thead>
+      <tbody set:html={htmlBoardNotice}></tbody>
+    </table>
+  </div>
+
+  <footer>
+    <p>Copyright ⓒ (주)엠밸리테크. All Rights Reserved.</p>
+  </footer>
+</body>
+</html>

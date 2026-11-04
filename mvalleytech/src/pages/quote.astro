@@ -1,0 +1,101 @@
+---
+---
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>(주)엠밸리테크 - 견적문의</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  body { background-color: #f8fafc; color: #333; line-height: 1.6; }
+  .layer-1 { width: 100%; background-color: #ffffff; border-bottom: 2px solid #0f4c81; }
+  .main-banner { width: 100%; height: 250px; background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('https://raw.githubusercontent.com/GlassBird210/mvalleytech/main/mainbanner.jpg') center/cover no-repeat; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; text-align: center; cursor: pointer; }
+  .main-banner h1 { font-size: 42px; font-weight: 500; }
+  .main-banner p { font-size: 24px; font-weight: 300; margin-top: 8px; opacity: 0.9; }
+  .gnb-menu { display: flex; justify-content: center; background-color: #0f4c81; flex-wrap: wrap; }
+  .gnb-btn { padding: 14px 24px; color: #ffffff; background: transparent; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; text-decoration: none; }
+  .gnb-btn:hover, .gnb-btn.active { background-color: #0b3860; color: #ffd700; }
+  .layer-3 { width: 100%; padding: 50px 20px; max-width: 1200px; margin: 0 auto; }
+  .quote-wrap { background: #ffffff; padding: 35px; border-radius: 10px; border: 1px solid #cbd5e1; max-width: 800px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+  .quote-row { margin-bottom: 15px; display: flex; align-items: center; }
+  .quote-label { width: 140px; font-weight: 600; font-size: 14px; color: #334155; }
+  .quote-input { flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; }
+  .privacy-box { background: #f8fafc; padding: 18px; border-radius: 6px; border: 1px solid #e2e8f0; margin-top: 25px; margin-bottom: 25px; }
+  .privacy-scroll { height: 140px; overflow-y: auto; padding: 15px; border: 1px solid #cbd5e1; border-radius: 4px; background: #ffffff; font-size: 13px; color: #475569; line-height: 1.7; margin: 12px 0; }
+  .quote-submit-btn { width: 100%; padding: 16px; background: #0f4c81; color: #fff; font-size: 16px; font-weight: 700; border: none; border-radius: 6px; cursor: pointer; }
+  footer { background-color: #1e293b; color: #94a3b8; padding: 40px 20px; font-size: 13px; border-top: 1px solid #334155; text-align: center; margin-top: 50px; }
+</style>
+</head>
+<body>
+  <div class="layer-1">
+    <div class="main-banner" onclick="location.href='/'">
+      <h1>(주)엠밸리테크</h1>
+      <p>세계일류를 꿈꾸는, 능동적이고 적극적인 개척정신</p>
+    </div>
+    <div class="gnb-menu">
+      <button class="gnb-btn" onclick="location.href='/category/all'">제품소개</button>
+      <button class="gnb-btn" onclick="location.href='/board/category/all'">기술자료</button>
+      <button class="gnb-btn active" onclick="location.href='/quote'">견적문의</button>
+      <button class="gnb-btn" onclick="location.href='/cs'">고객센터</button>
+      <button class="gnb-btn" onclick="location.href='/about'">회사소개</button>
+    </div>
+  </div>
+
+  <div class="layer-3">
+    <h2 style="color:#0f4c81; margin-bottom:25px; border-bottom:2px solid #0f4c81; padding-bottom:10px; text-align:center;">견적문의 작성</h2>
+    <form id="quoteWebForm" onsubmit="submitQuoteToEmail(event)" class="quote-wrap">
+      <h3 style="font-size:16px; margin-bottom:20px; color:#1e293b; border-left:4px solid #0f4c81; padding-left:10px; font-weight:700;">기본정보</h3>
+      <div class="quote-row"><label class="quote-label">이름 *</label><input type="text" id="wName" class="quote-input" required></div>
+      <div class="quote-row"><label class="quote-label">회사명 *</label><input type="text" id="wCompany" class="quote-input" required></div>
+      <div class="quote-row"><label class="quote-label">핸드폰 *</label><input type="tel" id="wPhone" class="quote-input" required placeholder="010-0000-0000"></div>
+      <div class="quote-row"><label class="quote-label">이메일 *</label><input type="email" id="wEmail" class="quote-input" required placeholder="example@email.com"></div>
+      <h3 style="font-size:16px; margin: 25px 0 20px 0; color:#1e293b; border-left:4px solid #0f4c81; padding-left:10px; font-weight:700;">상세정보</h3>
+      <div class="quote-row"><label class="quote-label">모델명</label><input type="text" id="wModel" class="quote-input"></div>
+      <div class="quote-row"><label class="quote-label">용도(예: 실험실 설치)</label><input type="text" id="wUsage" class="quote-input"></div>
+      <div class="quote-row"><label class="quote-label">유체(예: 기체, O2)</label><input type="text" id="wFluid" class="quote-input"></div>
+      <div class="quote-row"><label class="quote-label">온도 및 압력</label><input type="text" id="wFluid" class="quote-input"></div>
+      <div class="quote-row"><label class="quote-label">방폭 or 비방폭</label><input type="text" id="wExp" class="quote-input"></div>
+      <div class="quote-row"><label class="quote-label">수량</label><input type="number" id="wQty" class="quote-input" min="1"></div>
+      <div class="quote-row"><label class="quote-label">기타 문의사항</label><input type="text" id="wContent" class="quote-input" required placeholder="내용을 입력해주세요."></div>
+      
+      <div class="privacy-box">
+        <p style="font-weight:700; color:#1e293b; margin-bottom:8px;">개인정보 취급 방침</p>
+        <div class="privacy-scroll"><strong>수집하는 개인정보의 항목</strong><br>회사는 회원가입, 상담 등을 위해 정보를 수집합니다.<br>- 수집항목 : 이름, 회사명, 핸드폰, 이메일, 내용 등</div>
+        <label style="display:flex; align-items:center; cursor:pointer; font-weight:600; color:#1e293b; margin-top:15px;"><input type="checkbox" required style="width:16px; height:16px; margin-right:8px;"> 위 개인정보취급방침에 동의합니다.</label>
+      </div>
+      <button type="submit" id="quoteSubmitBtn" class="quote-submit-btn">견적문의 제출하기</button>
+    </form>
+  </div>
+
+  <footer>
+    <p>Copyright ⓒ (주)엠밸리테크. All Rights Reserved.</p>
+  </footer>
+
+  <script>
+    function submitQuoteToEmail(event) {
+      event.preventDefault();
+      const btn = document.getElementById('quoteSubmitBtn');
+      btn.innerText = '전송 중...'; btn.disabled = true;
+      const formData = new URLSearchParams();
+      formData.append('name', document.getElementById('wName').value);
+      formData.append('company', document.getElementById('wCompany').value);
+      formData.append('phone', document.getElementById('wPhone').value);
+      formData.append('email', document.getElementById('wEmail').value);
+      formData.append('model', document.getElementById('wModel').value);
+      formData.append('usage', document.getElementById('wUsage').value);
+      formData.append('fluid', document.getElementById('wFluid').value);
+      formData.append('exp', document.getElementById('wExp').value);
+      formData.append('qty', document.getElementById('wQty').value);
+      formData.append('content', document.getElementById('wContent').value);
+      
+      const scriptURL = 'https://script.google.com/macros/s/AKfycbyIgq6G0vCCYu6reZMDV90yBmopMUqo9krv47HLSRX4I3pHIUKKoV4lL_203Zea7zxD/exec';
+      fetch(scriptURL, { method: 'POST', body: formData })
+        .then(() => { alert('견적 문의가 전달되었습니다.'); document.getElementById('quoteWebForm').reset(); })
+        .catch(err => { alert('전송 오류. 전화 문의 부탁드립니다.'); console.error(err); })
+        .finally(() => { btn.innerText = '견적문의 제출하기'; btn.disabled = false; });
+    }
+  </script>
+</body>
+</html>

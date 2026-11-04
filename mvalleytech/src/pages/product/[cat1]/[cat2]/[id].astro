@@ -1,0 +1,127 @@
+---
+export async function getStaticPaths() {
+  const SHEET_ID = '12QBZHTDjAZg35NkGHappq2AiwdGf40RdxVb7zxXRwuE';
+  const prodUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=제품목록`;
+  const prodRes = await fetch(prodUrl);
+  const prodText = await prodRes.text();
+  const prodJson = JSON.parse(prodText.substring(47, prodText.length - 2));
+  let rows = (prodJson.table.rows || []).filter(r => r.c && r.c[0]?.v && r.c[0].v !== '1차카테고리');
+  rows.sort((a, b) => (parseInt(a.c[2]?.v) || 9999) - (parseInt(b.c[2]?.v) || 9999));
+
+  function getSlug(text) {
+    const map = {
+      '노점계': 'dew', '수분활성도측정기': 'aw', '수분측정기': 'moist',
+      '유량계': 'flow', '가스분석기': 'gasana', '가스측정기': 'gasdet', '온습도계': 'temp',
+      '휴대용': 'portable', '설치형': 'fixed', '부식가스용': 'corrosive', '판넬': 'panel',
+      '탁상형': 'tabletop', '습도시약': 'reagent', '콘크리트': 'concrete', '목재': 'wood', '오일': 'oil',
+      '초음파': 'ultrasonic', '인라인': 'inline', '산소': 'oxygen', '수분': 'moisture',
+      '일산화탄소': 'co', '이산화탄소': 'co2', '메탄': 'ch4', '암모니아': 'nh3',
+      '특수가스': 'special', '다종가스': 'multi', '장비': 'equipment',
+      '벽걸이형': 'wall', '프로브': 'probe', '데이터로거': 'logger'
+    };
+    return map[text] || encodeURIComponent(text);
+  }
+
+  return rows.map((r, index) => {
+    const c = r.c;
+    const cat1 = getSlug(c[0]?.v || 'all');
+    const cat2 = getSlug(c[1]?.v || 'all');
+
+    return {
+      params: { cat1, cat2, id: index.toString() },
+      props: {
+        title: c[3]?.v || '', usage: c[4]?.v || '-', feature: c[5]?.v || '-',
+        maker: c[6]?.v || '-', range: c[7]?.v || '',
+        imgUrl: c[8]?.v || 'https://via.placeholder.com/340x200?text=No+Image',
+        desc: c[9]?.v || '상세설명 준비 중입니다.',
+        pdfs: [ 
+          { name: c[10]?.v || '', url: c[11]?.v || '' }, { name: c[12]?.v || '', url: c[13]?.v || '' }, 
+          { name: c[14]?.v || '', url: c[15]?.v || '' }, { name: c[16]?.v || '', url: c[17]?.v || '' } 
+        ]
+      }
+    };
+  });
+}
+
+const { title, usage, feature, maker, range, imgUrl, desc, pdfs } = Astro.props;
+const formattedDesc = desc
+  .replace(/\[(.*?)\]/g, '<h3 style="color:#0f4c81; border-left:4px solid #0f4c81; padding-left:10px; margin:24px 0 12px 0; font-size:18px; font-weight:700;">[$1]</h3>')
+  .replace(/^- (.*$)/gim, '<div style="padding-left:14px; margin-bottom:8px;">• $1</div>')
+  .replace(/\n/g, '<br>');
+---
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>{title} - (주)엠밸리테크</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+    body { background-color: #f8fafc; color: #333; line-height: 1.6; }
+    .layer-1 { width: 100%; background-color: #ffffff; border-bottom: 2px solid #0f4c81; }
+    .main-banner { width: 100%; height: 250px; background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('https://raw.githubusercontent.com/GlassBird210/mvalleytech/main/mainbanner.jpg') center/cover no-repeat; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; text-align: center; cursor: pointer; }
+    .main-banner h1 { font-size: 42px; font-weight: 500; }
+    .main-banner p { font-size: 24px; font-weight: 300; margin-top: 8px; opacity: 0.9; }
+    .gnb-menu { display: flex; justify-content: center; background-color: #0f4c81; flex-wrap: wrap; }
+    .gnb-btn { padding: 14px 24px; color: #ffffff; background: transparent; border: none; font-size: 16px; font-weight: 600; cursor: pointer; }
+    .gnb-btn:hover { background-color: #0b3860; color: #ffd700; }
+    .detail-wrap { padding: 50px 20px; }
+    .product-detail-view { max-width: 1200px; margin: 0 auto; background: #ffffff; padding: 40px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+    .detail-back-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-weight: 600; cursor: pointer; text-decoration: none; margin-bottom: 25px; transition: all 0.2s; }
+    .detail-back-btn:hover { background-color: #0f4c81; color: #ffffff; }
+    .detail-top { display: flex; gap: 40px; margin-bottom: 40px; border-bottom: 2px solid #f1f5f9; padding-bottom: 35px; flex-wrap: wrap; }
+    .detail-img { width: 380px; height: 320px; object-fit: cover; border-radius: 10px; border: 1px solid #e2e8f0; }
+    .detail-specs { flex: 1; min-width: 300px; }
+    .detail-title { font-size: 26px; font-weight: 700; color: #0f4c81; margin-bottom: 20px; border-bottom: 1.5px solid #0f4c81; padding-bottom: 10px; }
+    .detail-spec-item { font-size: 15px; color: #334155; margin-bottom: 10px; display: flex; }
+    .detail-spec-item span { font-weight: 700; width: 95px; color: #1e293b; }
+    .pdf-btn-group { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 25px; }
+    .pdf-btn-item { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; background-color: #0284c7; color: #fff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600; }
+    .detail-description { font-size: 15px; color: #334155; line-height: 1.85; }
+    footer { background-color: #1e293b; color: #94a3b8; padding: 40px 20px; font-size: 13px; border-top: 1px solid #334155; text-align: center; margin-top: 50px; }
+  </style>
+</head>
+<body>
+  <div class="layer-1">
+    <div class="main-banner" onclick="location.href='/'">
+      <h1>(주)엠밸리테크</h1>
+      <p>세계일류를 꿈꾸는, 능동적이고 적극적인 개척정신</p>
+    </div>
+    <div class="gnb-menu">
+      <button class="gnb-btn" onclick="location.href='/'">제품소개</button>
+      <button class="gnb-btn" onclick="location.href='/'">기술자료</button>
+      <button class="gnb-btn" onclick="location.href='/'">견적문의</button>
+      <button class="gnb-btn" onclick="location.href='/'">고객센터</button>
+      <button class="gnb-btn" onclick="location.href='/'">회사소개</button>
+    </div>
+  </div>
+
+  <div class="detail-wrap">
+    <div class="product-detail-view">
+      <a href="javascript:history.back()" class="detail-back-btn">← 이전 페이지로 돌아가기</a>
+      <div class="detail-top">
+        <img src={imgUrl} class="detail-img" alt={title}>
+        <div class="detail-specs">
+          <div>
+            <div class="detail-title">{title}</div>
+            <div class="detail-spec-item"><span>용도</span>: {usage}</div>
+            <div class="detail-spec-item"><span>특성</span>: {feature}</div>
+            {range !== '-' && <div class="detail-spec-item"><span>측정</span>: {range}</div>}
+            <div class="detail-spec-item"><span>제조</span>: {maker}</div>
+          </div>
+          <div class="pdf-btn-group">
+            {pdfs.map(pdf => (
+              pdf.url && <a href={pdf.url} target="_blank" class="pdf-btn-item">📄 {pdf.name || '카탈로그 (PDF)'}</a>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div class="detail-description" set:html={formattedDesc}></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Copyright ⓒ (주)엠밸리테크. All Rights Reserved.</p>
+  </footer>
+</body>
+</html>

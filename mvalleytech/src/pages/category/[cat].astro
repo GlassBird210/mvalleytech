@@ -1,0 +1,338 @@
+---
+export async function getStaticPaths() {
+  return [
+    { params: { cat: 'all' }, props: { targetId: 'prod-all' } },
+    { params: { cat: 'dew' }, props: { targetId: 'prod-dew' } },
+    { params: { cat: 'aw' }, props: { targetId: 'prod-aw' } },
+    { params: { cat: 'moist' }, props: { targetId: 'prod-moist' } },
+    { params: { cat: 'flow' }, props: { targetId: 'prod-flow' } },
+    { params: { cat: 'gasana' }, props: { targetId: 'prod-gasana' } },
+    { params: { cat: 'gasdet' }, props: { targetId: 'prod-gasdet' } },
+    { params: { cat: 'temp' }, props: { targetId: 'prod-temp' } },
+  ];
+}
+
+const { cat } = Astro.params;
+const { targetId } = Astro.props;
+
+const SHEET_ID = '12QBZHTDjAZg35NkGHappq2AiwdGf40RdxVb7zxXRwuE';
+
+const prodUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=제품목록`;
+const prodRes = await fetch(prodUrl);
+const prodText = await prodRes.text();
+const prodJson = JSON.parse(prodText.substring(47, prodText.length - 2));
+let rows = (prodJson.table.rows || []).filter(r => r.c && r.c[0]?.v && r.c[0].v !== '1차카테고리');
+rows.sort((a, b) => (parseInt(a.c[2]?.v) || 9999) - (parseInt(b.c[2]?.v) || 9999));
+
+const globalProducts = [];
+let htmlGridAll = '', htmlGridDew = '', htmlGridAw = '', htmlGridMoist = '', htmlGridFlow = '', htmlGridGasana = '', htmlGridGasdet = '', htmlGridTemp = '';
+
+function getSlug(text) {
+  const map = {
+    '노점계': 'dew', '수분활성도측정기': 'aw', '수분측정기': 'moist',
+    '유량계': 'flow', '가스분석기': 'gasana', '가스측정기': 'gasdet', '온습도계': 'temp',
+    '휴대용': 'portable', '설치형': 'fixed', '부식가스용': 'corrosive', '판넬': 'panel',
+    '탁상형': 'tabletop', '습도시약': 'reagent', '콘크리트': 'concrete', '목재': 'wood', '오일': 'oil',
+    '초음파': 'ultrasonic', '인라인': 'inline', '산소': 'oxygen', '수분': 'moisture',
+    '일산화탄소': 'co', '이산화탄소': 'co2', '메탄': 'ch4', '암모니아': 'nh3',
+    '특수가스': 'special', '다종가스': 'multi', '장비': 'equipment',
+    '벽걸이형': 'wall', '프로브': 'probe', '데이터로거': 'logger'
+  };
+  return map[text] || encodeURIComponent(text);
+}
+
+rows.forEach((r, index) => {
+  const c = r.c;
+  if (!c || !c[0] || !c[3]) return;
+  const p = {
+    category1: c[0]?.v || '', category2: c[1]?.v || '', title: c[3]?.v || '',
+    usage: c[4]?.v || '-', feature: c[5]?.v || '-', maker: c[6]?.v || '-',
+    range: c[7]?.v || '', imgUrl: c[8]?.v || 'https://via.placeholder.com/340x200?text=No+Image',
+    desc: c[9]?.v || '',
+    pdfs: [ { name: c[10]?.v || '', url: c[11]?.v || '' }, { name: c[12]?.v || '', url: c[13]?.v || '' }, { name: c[14]?.v || '', url: c[15]?.v || '' }, { name: c[16]?.v || '', url: c[17]?.v || '' } ]
+  };
+  globalProducts.push(p);
+
+  const searchAllStr = (p.title + ' ' + p.usage + ' ' + p.maker).toLowerCase();
+  const c1 = getSlug(p.category1 || 'all');
+  const c2 = getSlug(p.category2 || 'all');
+
+  const cardHTML = `
+    <div class="card" onclick="location.href='/product/${c1}/${c2}/${index}'" data-cat2="${p.category2.toLowerCase()}" data-title="${p.title.toLowerCase()}" data-maker="${p.maker.toLowerCase()}" data-all="${searchAllStr}">
+      <img src="${p.imgUrl}" class="card-img" alt="${p.title}" onerror="this.src='https://via.placeholder.com/340x200?text=No+Image'">
+      <div class="card-body">
+        <div class="card-title">${p.title}</div>
+        <div class="card-info"><span>용도</span>: ${p.usage}</div>
+        <div class="card-info"><span>특성</span>: ${p.feature}</div>
+        ${p.range ? `<div class="card-info"><span>측정</span>: ${p.range}</div>` : ''}
+        <div class="card-info"><span>제조</span>: ${p.maker}</div>
+      </div>
+    </div>`;
+  
+  htmlGridAll += cardHTML;
+  if (p.category1 === '노점계') htmlGridDew += cardHTML;
+  else if (p.category1 === '수분활성도측정기') htmlGridAw += cardHTML;
+  else if (p.category1 === '수분측정기') htmlGridMoist += cardHTML;
+  else if (p.category1 === '유량계') htmlGridFlow += cardHTML;
+  else if (p.category1 === '가스분석기') htmlGridGasana += cardHTML;
+  else if (p.category1 === '가스측정기') htmlGridGasdet += cardHTML;
+  else if (p.category1 === '온습도계') htmlGridTemp += cardHTML;
+});
+
+const boardUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=기술자료`;
+const boardRes = await fetch(boardUrl);
+const boardText = await boardRes.text();
+const boardJson = JSON.parse(boardText.substring(47, boardText.length - 2));
+let bRows = (boardJson.table.rows || []).filter(r => r.c && r.c[0]?.v && r.c[0].v !== '분류');
+
+const globalBoards = [];
+let htmlBoardAll = '', htmlBoardGeneral = '', htmlBoardVideo = '', htmlBoardNotice = '';
+
+bRows.forEach((r, originalIndex) => {
+  const c = r.c;
+  if (!c || !c[0]) return;
+  const b = {
+    _originalIndex: originalIndex, category: c[0]?.v || '', title: c[1]?.v || c[1]?.f || '제목 없음',
+    date: c[2]?.f || c[2]?.v || '날짜 없음', content: String(c[5]?.v || ''), imgUrl: c[3]?.v || '',
+    youtubeId: c[4]?.v || '', fileName: c[6]?.v || '', fileUrl: c[7]?.v || ''
+  };
+  globalBoards.push(b);
+});
+
+[...globalBoards].reverse().forEach((post) => {
+  let displayTitle = post.title;
+  if (post.fileUrl && post.fileUrl.startsWith('http')) displayTitle = post.title + ' 💾';
+  const trHTML = `<tr><td>${post.category}</td><td class="b-title" onclick="location.href='/board/${post._originalIndex}'">${displayTitle}</td><td>${post.date}</td></tr>`;
+  if (post.category === '범용' || post.category === '동영상') htmlBoardAll += trHTML;
+  if (post.category === '범용') htmlBoardGeneral += trHTML;
+  else if (post.category === '동영상') htmlBoardVideo += trHTML;
+  else if (post.category === '공지사항') htmlBoardNotice += trHTML;
+});
+---
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>(주)엠밸리테크 - 카테고리</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  body { background-color: #f8fafc; color: #333; line-height: 1.6; }
+  .layer-1 { width: 100%; background-color: #ffffff; border-bottom: 2px solid #0f4c81; }
+  .main-banner { width: 100%; height: 350px; background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('https://raw.githubusercontent.com/GlassBird210/mvalleytech/main/mainbanner.jpg') center/cover no-repeat; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; text-align: center; padding: 0 15px; cursor: pointer; }
+  .main-banner h1 { font-size: 54px; font-weight: 500; letter-spacing: -0.5px; }
+  .main-banner p { font-size: 32px; font-weight: 300; margin-top: 8px; opacity: 0.9; }
+  .gnb-menu { display: flex; justify-content: center; background-color: #0f4c81; flex-wrap: wrap; }
+  .gnb-btn { padding: 14px 24px; color: #ffffff; background: transparent; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  .gnb-btn:hover, .gnb-btn.active { background-color: #0b3860; color: #ffd700; }
+  .layer-2 { width: 100%; background-color: #e2e8f0; border-bottom: 1px solid #cbd5e1; min-height: 50px; display: flex; justify-content: center; align-items: center; }
+  .sub-menu-group { display: none; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 10px 15px; }
+  .sub-menu-group.active { display: flex; }
+  .sub-btn { padding: 6px 16px; background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 20px; font-size: 13.5px; color: #334155; cursor: pointer; white-space: nowrap; transition: all 0.2s; text-decoration: none; }
+  .sub-btn:hover, .sub-btn.active { background-color: #0f4c81; color: #ffffff; border-color: #0f4c81; font-weight: 500; }
+  .search-container { max-width: 1200px; margin: 0 auto 20px auto; display: flex; justify-content: flex-start; padding: 0 10px; }
+  .search-box { width: 100%; max-width: 500px; display: flex; gap: 8px; align-items: center; }
+  .search-select { padding: 9px 14px; font-size: 13.5px; font-weight: 600; color: #0f4c81; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; background-color: #fff; cursor: pointer; }
+  .search-input { flex: 1; padding: 9px 14px; font-size: 14px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); transition: border-color 0.2s; }
+  .search-input:focus { border-color: #0f4c81; }
+  .sub2-menu-box { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; padding: 12px 20px; background-color: #ffffff; border: 1.5px solid #334155; border-radius: 8px; margin-bottom: 25px; font-size: 14px; }
+  .sub2-btn { background: none; border: none; color: #475569; font-weight: 500; cursor: pointer; padding: 3px 8px; border-radius: 4px; transition: all 0.2s; }
+  .sub2-btn:hover, .sub2-btn.active { color: #0f4c81; font-weight: 700; background-color: #e2e8f0; }
+  .sub2-divider { color: #cbd5e1; font-size: 12px; }
+  .layer-3 { width: 100%; padding: 25px 20px 50px 20px; min-height: 500px; position: relative; }
+  .content-panel { display: none; max-width: 1200px; margin: 0 auto; animation: fadeIn 0.3s ease-in-out; }
+  .content-panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  @media (max-width: 992px) { .card-grid { grid-template-columns: repeat(2, 1fr); gap: 18px; } :global(.card-img) { height: 250px; } }
+  @media (max-width: 576px) { .card-grid { grid-template-columns: 1fr; gap: 15px; } :global(.card-img) { height: 300px; } }
+  :global(.card) { border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+  :global(.card:hover) { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
+  :global(.card-img) { display: block; width: 100%; height: 200px; object-fit: cover; background-color: #f1f5f9; border-bottom: 1px solid #f1f5f9; }
+  :global(.card-body) { padding: 18px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+  :global(.card-title) { font-size: 18px; font-weight: 700; color: #0f4c81; margin-bottom: 12px; line-height: 1.3; }
+  :global(.card-info) { font-size: 13.5px; color: #475569; margin-bottom: 6px; }
+  :global(.card-info span) { font-weight: 600; color: #1e293b; display: inline-block; width: 30px; }
+  :global(.board-table) { width: 100%; border: 1px solid #e2e8f0; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-top: 15px; }
+  :global(.board-table th) { border: 1px solid #e2e8f0; background: #0f4c81; color: #fff; padding: 14px; font-size: 14.5px; font-weight: 600; text-align: center; }
+  :global(.board-table td) { border: 1px solid #e2e8f0; padding: 14px; border-bottom: 1px solid #e2e8f0; text-align: center; font-size: 14px; color: #334155; }
+  :global(.board-table td.b-title) { text-align: left; font-weight: 500; cursor: pointer; transition: color 0.2s; }
+  :global(.board-table td.b-title:hover) { color: #0284c7; text-decoration: underline; }
+  .quote-wrap { background: #ffffff; padding: 35px; border-radius: 10px; border: 1px solid #cbd5e1; max-width: 800px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+  .quote-row { margin-bottom: 15px; display: flex; align-items: center; }
+  .quote-label { width: 140px; font-weight: 600; font-size: 14px; color: #334155; }
+  .quote-input { flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; }
+  .privacy-box { background: #f8fafc; padding: 18px; border-radius: 6px; border: 1px solid #e2e8f0; margin-top: 25px; margin-bottom: 25px; }
+  .privacy-scroll { height: 140px; overflow-y: auto; padding: 15px; border: 1px solid #cbd5e1; border-radius: 4px; background: #ffffff; font-size: 13px; color: #475569; line-height: 1.7; margin: 12px 0; }
+  .quote-submit-btn { width: 100%; padding: 16px; background: #0f4c81; color: #fff; font-size: 16px; font-weight: 700; border: none; border-radius: 6px; cursor: pointer; }
+  footer { background-color: #1e293b; color: #94a3b8; padding: 40px 20px 30px 20px; font-size: 13px; border-top: 1px solid #334155; }
+  .footer-container { max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; }
+  .footer-bank { background: #334155; padding: 15px 20px; border-radius: 8px; color: #f1f5f9; }
+  .copyright { max-width: 1200px; margin: 25px auto 0 auto; padding-top: 15px; border-top: 1px solid #334155; text-align: center; font-size: 12px; }
+</style>
+</head>
+<body>
+  <div class="layer-1">
+    <div class="main-banner" onclick="location.href='/'" title="홈으로 이동">
+      <h1>(주)엠밸리테크</h1>
+      <p>세계일류를 꿈꾸는, 능동적이고 적극적인 개척정신</p>
+    </div>
+	<div class="gnb-menu">
+	  <button class="gnb-btn active" onclick="location.href='/category/all'">제품소개</button>
+	  <button class="gnb-btn" onclick="location.href='/board/category/all'">기술자료</button>
+	  <button class="gnb-btn" onclick="location.href='/quote'">견적문의</button>
+	  <button class="gnb-btn" onclick="location.href='/cs'">고객센터</button>
+	  <button class="gnb-btn" onclick="location.href='/about'">회사소개</button>
+	</div>
+  </div>
+
+  <div class="layer-2">
+    <div id="sub-prod" class="sub-menu-group active">
+      <a href="/category/all" class={`sub-btn ${cat === 'all' ? 'active' : ''}`}>전체</a>
+      <a href="/category/dew" class={`sub-btn ${cat === 'dew' ? 'active' : ''}`}>노점계</a>
+      <a href="/category/aw" class={`sub-btn ${cat === 'aw' ? 'active' : ''}`}>수분활성도측정기</a>
+      <a href="/category/moist" class={`sub-btn ${cat === 'moist' ? 'active' : ''}`}>수분측정기</a>
+      <a href="/category/flow" class={`sub-btn ${cat === 'flow' ? 'active' : ''}`}>유량계</a>
+      <a href="/category/gasana" class={`sub-btn ${cat === 'gasana' ? 'active' : ''}`}>가스분석기</a>
+      <a href="/category/gasdet" class={`sub-btn ${cat === 'gasdet' ? 'active' : ''}`}>가스측정기</a>
+      <a href="/category/temp" class={`sub-btn ${cat === 'temp' ? 'active' : ''}`}>정밀 온습도계</a>
+    </div>
+  </div>
+
+  <div class="layer-3">
+    <div class="search-container" id="searchContainer">
+      <div class="search-box">
+        <select id="searchType" class="search-select" onchange="filterProducts()">
+          <option value="all">통합검색</option>
+          <option value="title">상품명</option>
+          <option value="maker">제조사</option>
+        </select>
+        <input type="text" id="searchInput" class="search-input" placeholder="검색어를 입력하세요..." oninput="filterProducts()">
+      </div>
+    </div>
+
+    <div id="prod-all" class={`content-panel ${targetId === 'prod-all' ? 'active' : ''}`}><div class="card-grid" id="grid-전체" set:html={htmlGridAll}></div></div>
+    
+    <div id="prod-dew" class={`content-panel ${targetId === 'prod-dew' ? 'active' : ''}`}>
+      <div class="sub2-menu-box" id="sub2-노점계">
+        <button class="sub2-btn active" onclick="filterSub2('grid-노점계', 'all', this)">All</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-노점계', '휴대용', this)">휴대용</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-노점계', '설치형', this)">설치형</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-노점계', '부식가스용', this)">부식가스용</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-노점계', '판넬', this)">판넬</button>
+      </div>
+      <div class="card-grid" id="grid-노점계" set:html={htmlGridDew}></div>
+    </div>
+
+    <div id="prod-aw" class={`content-panel ${targetId === 'prod-aw' ? 'active' : ''}`}>
+      <div class="sub2-menu-box" id="sub2-수분활성도측정기">
+        <button class="sub2-btn active" onclick="filterSub2('grid-수분활성도측정기', 'all', this)">All</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-수분활성도측정기', '휴대용', this)">휴대용</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-수분활성도측정기', '탁상형', this)">탁상형</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-수분활성도측정기', '습도시약', this)">습도시약 / 샘플케이스</button>
+      </div>
+      <div class="card-grid" id="grid-수분활성도측정기" set:html={htmlGridAw}></div>
+    </div>
+
+    <div id="prod-moist" class={`content-panel ${targetId === 'prod-moist' ? 'active' : ''}`}>
+      <div class="sub2-menu-box" id="sub2-수분측정기">
+        <button class="sub2-btn active" onclick="filterSub2('grid-수분측정기', 'all', this)">All</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-수분측정기', '콘크리트', this)">콘크리트</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-수분측정기', '목재', this)">목재</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-수분측정기', '오일', this)">오일</button>
+      </div>
+      <div class="card-grid" id="grid-수분측정기" set:html={htmlGridMoist}></div>
+    </div>
+
+    <div id="prod-flow" class={`content-panel ${targetId === 'prod-flow' ? 'active' : ''}`}>
+      <div class="sub2-menu-box" id="sub2-유량계">
+        <button class="sub2-btn active" onclick="filterSub2('grid-유량계', 'all', this)">All</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-유량계', '초음파', this)">초음파(외벽부착형)</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-유량계', '인라인', this)">인라인(면적식)</button>
+      </div>
+      <div class="card-grid" id="grid-유량계" set:html={htmlGridFlow}></div>
+    </div>
+
+    <div id="prod-gasana" class={`content-panel ${targetId === 'prod-gasana' ? 'active' : ''}`}>
+      <div class="sub2-menu-box" id="sub2-가스분석기">
+        <button class="sub2-btn active" onclick="filterSub2('grid-가스분석기', 'all', this)">All</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '산소', this)">산소(O₂)</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '수분', this)">수분(H₂O) / 중수(D₂O)</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '일산화탄소', this)">일산화탄소(CO)</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '이산화탄소', this)">이산화탄소(CO₂)</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '메탄', this)">메탄(CH₄)</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '암모니아', this)">암모니아(NH₃)</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '특수가스', this)">특수가스</button>
+		<button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '다종가스', this)">다종가스</button>
+		<button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '장비', this)">장비</button>
+      </div>
+      <div class="card-grid" id="grid-가스분석기" set:html={htmlGridGasana}></div>
+    </div>
+
+    <div id="prod-gasdet" class={`content-panel ${targetId === 'prod-gasdet' ? 'active' : ''}`}>
+      <div class="sub2-menu-box" id="sub2-가스측정기">
+        <button class="sub2-btn active" onclick="filterSub2('grid-가스측정기', 'all', this)">All</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스측정기', '산소', this)">산소</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스측정기', '다종가스', this)">다종가스</button>
+      </div>
+      <div class="card-grid" id="grid-가스측정기" set:html={htmlGridGasdet}></div>
+    </div>
+
+    <div id="prod-temp" class={`content-panel ${targetId === 'prod-temp' ? 'active' : ''}`}>
+      <div class="sub2-menu-box" id="sub2-온습도계">
+        <button class="sub2-btn active" onclick="filterSub2('grid-온습도계', 'all', this)">All</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-온습도계', '휴대용', this)">휴대용</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-온습도계', '벽걸이형', this)">벽걸이형</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-온습도계', '프로브', this)">프로브</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-온습도계', '데이터로거', this)">온습도 데이터로거</button>
+      </div>
+      <div class="card-grid" id="grid-온습도계" set:html={htmlGridTemp}></div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-container">
+      <div>
+        <h3 style="color:#f8fafc; font-size:16px; margin-bottom:12px;">(주)엠밸리테크</h3>
+        <p>대표자: 박남순 | 사업자등록번호: 796-81-01792 | 통신판매신고: 2020-서울강서-0422</p>
+        <p>주소: 서울 강서구 마곡중앙4로 22 (마곡동) 파인스퀘어 A동 907호</p>
+        <p>TEL: 02-2666-7333 (평일 09:00~18:00) | EMAIL: mvalley1@naver.com</p>
+      </div>
+      <div class="footer-bank">
+        <h4 style="color:#ffd700; margin-bottom:6px; font-size:14px;">[ 입금 계좌 안내 ]</h4>
+        <p>우리은행 : 1005-803-905935</p>
+        <p>예금주 : (주)엠밸리테크</p>
+      </div>
+    </div>
+    <div class="copyright">Copyright ⓒ (주)엠밸리테크. All Rights Reserved.</div>
+  </footer>
+
+  <script define:vars={{ globalProducts, globalBoards, targetId }}>
+    let currentActivePanelId = targetId || 'prod-all';
+
+    function filterSub2(gridId, category2Keyword, btnEl) {
+      btnEl.parentElement.querySelectorAll('.sub2-btn').forEach(b => b.classList.remove('active'));
+      btnEl.classList.add('active');
+      const cards = document.querySelectorAll(`#${gridId} .card`);
+      const key = category2Keyword.toLowerCase().trim();
+      cards.forEach(card => {
+        const cat2 = (card.getAttribute('data-cat2') || '').toLowerCase();
+        card.style.display = (key === 'all' || cat2.includes(key)) ? 'flex' : 'none';
+      });
+    }
+
+    function filterProducts() {
+      const type = document.getElementById('searchType').value;
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      document.querySelectorAll(`#${currentActivePanelId} .card`).forEach(card => {
+        let textToSearch = type === 'title' ? card.getAttribute('data-title') : (type === 'maker' ? card.getAttribute('data-maker') : card.getAttribute('data-all'));
+        card.style.display = (textToSearch || '').includes(query) ? 'flex' : 'none';
+      });
+    }
+
+    Object.assign(window, { filterSub2, filterProducts });
+  </script>
+</body>
+</html>

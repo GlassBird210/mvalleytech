@@ -1,0 +1,553 @@
+---
+// ==========================================
+// [빌드 서버 영역] 
+// Netlify가 빌드할 때 단 1번만 구글 시트를 읽어와 정적 HTML을 찍어냅니다.
+// ==========================================
+const SHEET_ID = '12QBZHTDjAZg35NkGHappq2AiwdGf40RdxVb7zxXRwuE';
+
+// 1. 제품 목록 수신 및 HTML 사전 생성
+const prodUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=제품목록`;
+const prodRes = await fetch(prodUrl);
+const prodText = await prodRes.text();
+const prodJson = JSON.parse(prodText.substring(47, prodText.length - 2));
+let rows = (prodJson.table.rows || []).filter(r => r.c && r.c[0]?.v && r.c[0].v !== '1차카테고리');
+rows.sort((a, b) => (parseInt(a.c[2]?.v) || 9999) - (parseInt(b.c[2]?.v) || 9999));
+
+const globalProducts = [];
+let htmlGridAll = '', htmlGridDew = '', htmlGridAw = '', htmlGridMoist = '', htmlGridFlow = '', htmlGridGasana = '', htmlGridGasdet = '', htmlGridTemp = '';
+
+rows.forEach((r, index) => {
+  const c = r.c;
+  if (!c || !c[0] || !c[3]) return;
+  const p = {
+    category1: c[0]?.v || '', category2: c[1]?.v || '', title: c[3]?.v || '',
+    usage: c[4]?.v || '-', feature: c[5]?.v || '-', maker: c[6]?.v || '-',
+    range: c[7]?.v || '', imgUrl: c[8]?.v || 'https://via.placeholder.com/340x200?text=No+Image',
+    desc: c[9]?.v || '',
+    pdfs: [ { name: c[10]?.v || '', url: c[11]?.v || '' }, { name: c[12]?.v || '', url: c[13]?.v || '' }, { name: c[14]?.v || '', url: c[15]?.v || '' }, { name: c[16]?.v || '', url: c[17]?.v || '' } ]
+  };
+  globalProducts.push(p);
+
+  const searchAllStr = (p.title + ' ' + p.usage + ' ' + p.maker).toLowerCase();
+  
+  // 영문 슬러그 변환 헬퍼 함수
+  function getSlug(text) {
+    const map = {
+      '노점계': 'dew', '수분활성도측정기': 'aw', '수분측정기': 'moist',
+      '유량계': 'flow', '가스분석기': 'gasana', '가스측정기': 'gasdet', '온습도계': 'temp',
+      '휴대용': 'portable', '설치형': 'fixed', '부식가스용': 'corrosive', '판넬': 'panel',
+      '탁상형': 'tabletop', '습도시약': 'reagent', '콘크리트': 'concrete', '목재': 'wood', '오일': 'oil',
+      '초음파': 'ultrasonic', '인라인': 'inline', '산소': 'oxygen', '수분': 'moisture',
+      '일산화탄소': 'co', '이산화탄소': 'co2', '메탄': 'ch4', '암모니아': 'nh3',
+      '특수가스': 'special', '다종가스': 'multi', '장비': 'equipment',
+      '벽걸이형': 'wall', '프로브': 'probe', '데이터로거': 'logger'
+    };
+    return map[text] || encodeURIComponent(text);
+  }
+
+  const c1 = getSlug(p.category1 || 'all');
+  const c2 = getSlug(p.category2 || 'all');
+
+  const cardHTML = `
+    <div class="card" onclick="location.href='/product/${c1}/${c2}/${index}'" data-cat2="${p.category2.toLowerCase()}" data-title="${p.title.toLowerCase()}" data-maker="${p.maker.toLowerCase()}" data-all="${searchAllStr}">
+      <img src="${p.imgUrl}" class="card-img" alt="${p.title}" onerror="this.src='https://via.placeholder.com/340x200?text=No+Image'">
+      <div class="card-body">
+        <div class="card-title">${p.title}</div>
+        <div class="card-info"><span>용도</span>: ${p.usage}</div>
+        <div class="card-info"><span>특성</span>: ${p.feature}</div>
+        ${p.range ? `<div class="card-info"><span>측정</span>: ${p.range}</div>` : ''}
+        <div class="card-info"><span>제조</span>: ${p.maker}</div>
+      </div>
+    </div>`;
+  
+  htmlGridAll += cardHTML;
+  if (p.category1 === '노점계') htmlGridDew += cardHTML;
+  else if (p.category1 === '수분활성도측정기') htmlGridAw += cardHTML;
+  else if (p.category1 === '수분측정기') htmlGridMoist += cardHTML;
+  else if (p.category1 === '유량계') htmlGridFlow += cardHTML;
+  else if (p.category1 === '가스분석기') htmlGridGasana += cardHTML;
+  else if (p.category1 === '가스측정기') htmlGridGasdet += cardHTML;
+  else if (p.category1 === '온습도계') htmlGridTemp += cardHTML;
+});
+
+// 2. 기술자료(게시판) 수신 및 HTML 사전 생성
+const boardUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=기술자료`;
+const boardRes = await fetch(boardUrl);
+const boardText = await boardRes.text();
+const boardJson = JSON.parse(boardText.substring(47, boardText.length - 2));
+let bRows = (boardJson.table.rows || []).filter(r => r.c && r.c[0]?.v && r.c[0].v !== '분류');
+
+const globalBoards = [];
+let htmlBoardAll = '', htmlBoardGeneral = '', htmlBoardVideo = '', htmlBoardNotice = '';
+
+bRows.forEach((r, originalIndex) => {
+  const c = r.c;
+  if (!c || !c[0]) return;
+  const b = {
+    _originalIndex: originalIndex, category: c[0]?.v || '', title: c[1]?.v || c[1]?.f || '제목 없음',
+    date: c[2]?.f || c[2]?.v || '날짜 없음', content: String(c[5]?.v || ''), imgUrl: c[3]?.v || '',
+    youtubeId: c[4]?.v || '', fileName: c[6]?.v || '', fileUrl: c[7]?.v || ''
+  };
+  globalBoards.push(b);
+});
+
+[...globalBoards].reverse().forEach((post) => {
+  let displayTitle = post.title;
+  if (post.fileUrl && post.fileUrl.startsWith('http')) displayTitle = post.title + ' 💾';
+
+  const trHTML = `<tr><td>${post.category}</td><td class="b-title" onclick="location.href='/board/${post._originalIndex}'">${displayTitle}</td><td>${post.date}</td></tr>`;
+  
+  if (post.category === '범용' || post.category === '동영상') htmlBoardAll += trHTML;
+  if (post.category === '범용') htmlBoardGeneral += trHTML;
+  else if (post.category === '동영상') htmlBoardVideo += trHTML;
+  else if (post.category === '공지사항') htmlBoardNotice += trHTML;
+});
+---
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>(주)엠밸리테크 - 산업용 계측기 전문</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* 원본 0015 버전의 CSS 스타일과 100% 동일하게 유지 */
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  body { background-color: #f8fafc; color: #333; line-height: 1.6; }
+  .layer-1 { width: 100%; background-color: #ffffff; border-bottom: 2px solid #0f4c81; }
+  .main-banner {
+    width: 100%; height: 350px;
+    background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('https://raw.githubusercontent.com/GlassBird210/mvalleytech/main/mainbanner.jpg') center/cover no-repeat;
+    display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; text-align: center; padding: 0 15px; cursor: pointer;
+  }
+  .main-banner h1 { font-size: 54px; font-weight: 500; letter-spacing: -0.5px; }
+  .main-banner p { font-size: 32px; font-weight: 300; margin-top: 8px; opacity: 0.9; }
+  .gnb-menu { display: flex; justify-content: center; background-color: #0f4c81; flex-wrap: wrap; }
+  .gnb-btn { padding: 14px 24px; color: #ffffff; background: transparent; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  .gnb-btn:hover, .gnb-btn.active { background-color: #0b3860; color: #ffd700; }
+  .layer-2 { width: 100%; background-color: #e2e8f0; border-bottom: 1px solid #cbd5e1; min-height: 50px; display: flex; justify-content: center; align-items: center; }
+  .sub-menu-group { display: none; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 10px 15px; }
+  .sub-menu-group.active { display: flex; }
+  .sub-btn { padding: 6px 16px; background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 20px; font-size: 13.5px; color: #334155; cursor: pointer; white-space: nowrap; transition: all 0.2s; text-decoration: none; }
+  .sub-btn:hover, .sub-btn.active { background-color: #0f4c81; color: #ffffff; border-color: #0f4c81; font-weight: 500; }
+  .search-container { max-width: 1200px; margin: 0 auto 20px auto; display: flex; justify-content: flex-start; padding: 0 10px; }
+  .search-box { width: 100%; max-width: 500px; display: flex; gap: 8px; align-items: center; }
+  .search-select { padding: 9px 14px; font-size: 13.5px; font-weight: 600; color: #0f4c81; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; background-color: #fff; cursor: pointer; }
+  .search-input { flex: 1; padding: 9px 14px; font-size: 14px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); transition: border-color 0.2s; }
+  .search-input:focus { border-color: #0f4c81; }
+  .sub2-menu-box { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; padding: 12px 20px; background-color: #ffffff; border: 1.5px solid #334155; border-radius: 8px; margin-bottom: 25px; font-size: 14px; }
+  .sub2-btn { background: none; border: none; color: #475569; font-weight: 500; cursor: pointer; padding: 3px 8px; border-radius: 4px; transition: all 0.2s; }
+  .sub2-btn:hover, .sub2-btn.active { color: #0f4c81; font-weight: 700; background-color: #e2e8f0; }
+  .sub2-divider { color: #cbd5e1; font-size: 12px; }
+  .layer-3 { width: 100%; padding: 25px 20px 50px 20px; min-height: 500px; position: relative; }
+  .content-panel { display: none; max-width: 1200px; margin: 0 auto; animation: fadeIn 0.3s ease-in-out; }
+  .content-panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  @media (max-width: 992px) { .card-grid { grid-template-columns: repeat(2, 1fr); gap: 18px; } :global(.card-img) { height: 250px; } }
+  @media (max-width: 576px) { .card-grid { grid-template-columns: 1fr; gap: 15px; } :global(.card-img) { height: 300px; } }
+  :global(.card) { border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+  :global(.card:hover) { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
+  :global(.card-img) { display: block; width: 100%; height: 200px; object-fit: cover; background-color: #f1f5f9; border-bottom: 1px solid #f1f5f9; }
+  :global(.card-body) { padding: 18px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+  :global(.card-title) { font-size: 18px; font-weight: 700; color: #0f4c81; margin-bottom: 12px; line-height: 1.3; }
+  :global(.card-info) { font-size: 13.5px; color: #475569; margin-bottom: 6px; }
+  :global(.card-info span) { font-weight: 600; color: #1e293b; display: inline-block; width: 30px; }
+  .product-detail-view { display: none; max-width: 1200px; margin: 0 auto; background: #ffffff; padding: 40px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.05); animation: fadeIn 0.3s ease-in-out; }
+  .product-detail-view.active { display: block; }
+  .detail-back-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-weight: 600; cursor: pointer; margin-bottom: 25px; transition: all 0.2s; }
+  .detail-back-btn:hover { background-color: #0f4c81; color: #ffffff; border-color: #0f4c81; }
+  .detail-top { display: flex; gap: 40px; margin-bottom: 40px; border-bottom: 2px solid #f1f5f9; padding-bottom: 35px; }
+  .detail-img { width: 380px; height: 320px; object-fit: cover; border-radius: 10px; border: 1px solid #e2e8f0; background: #f8fafc; }
+  .detail-specs { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+  .detail-title { font-size: 26px; font-weight: 700; color: #0f4c81; margin-bottom: 20px; border-bottom: 1.5px solid #0f4c81; padding-bottom: 10px; }
+  .detail-spec-item { font-size: 15px; color: #334155; margin-bottom: 10px; display: flex; }
+  .detail-spec-item span { font-weight: 700; width: 95px; color: #1e293b; }
+  .pdf-btn-group { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 25px; }
+  :global(.pdf-btn-item) { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; background-color: #0284c7; color: #fff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 6px rgba(2,132,199,0.2); }
+  .detail-description { font-size: 15px; color: #334155; line-height: 1.85; word-break: keep-all; padding-top: 10px; }
+  :global(.board-table) { width: 100%; border: 1px solid #e2e8f0; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-top: 15px; }
+  :global(.board-table th) { border: 1px solid #e2e8f0; background: #0f4c81; color: #fff; padding: 14px; font-size: 14.5px; font-weight: 600; text-align: center; }
+  :global(.board-table td) { border: 1px solid #e2e8f0; padding: 14px; border-bottom: 1px solid #e2e8f0; text-align: center; font-size: 14px; color: #334155; }
+  :global(.board-table td.b-title) { text-align: left; font-weight: 500; cursor: pointer; transition: color 0.2s; }
+  :global(.board-table td.b-title:hover) { color: #0284c7; text-decoration: underline; }
+  .blog-view { display: none; background: #fff; padding: 40px; border-radius: 10px; border: 1px solid #e2e8f0; max-width: 900px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+  .blog-view.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+  .blog-header { border-bottom: 2px solid #0f4c81; padding-bottom: 15px; margin-bottom: 25px; }
+  .blog-title { font-size: 24px; font-weight: 700; color: #1e293b; margin-bottom: 10px; line-height: 1.4; }
+  .blog-meta { font-size: 13.5px; color: #64748b; }
+  .blog-content { font-size: 15.5px; color: #334155; line-height: 1.8; word-break: keep-all; }
+  :global(.blog-content img) { max-width: 100%; height: auto; margin: 25px 0; border-radius: 8px; border: 1px solid #e2e8f0; display: block; }
+  :global(.video-container) { position: relative; padding-bottom: 56.25%; height: 0; margin: 25px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  :global(.video-container iframe) { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+  .quote-wrap { background: #ffffff; padding: 35px; border-radius: 10px; border: 1px solid #cbd5e1; max-width: 800px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+  .quote-row { margin-bottom: 15px; display: flex; align-items: center; }
+  .quote-label { width: 140px; font-weight: 600; font-size: 14px; color: #334155; }
+  .quote-input { flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; }
+  .privacy-box { background: #f8fafc; padding: 18px; border-radius: 6px; border: 1px solid #e2e8f0; margin-top: 25px; margin-bottom: 25px; }
+  .privacy-scroll { height: 140px; overflow-y: auto; padding: 15px; border: 1px solid #cbd5e1; border-radius: 4px; background: #ffffff; font-size: 13px; color: #475569; line-height: 1.7; margin: 12px 0; }
+  .quote-submit-btn { width: 100%; padding: 16px; background: #0f4c81; color: #fff; font-size: 16px; font-weight: 700; border: none; border-radius: 6px; cursor: pointer; }
+  footer { background-color: #1e293b; color: #94a3b8; padding: 40px 20px 30px 20px; font-size: 13px; border-top: 1px solid #334155; }
+  .footer-container { max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; }
+  .footer-bank { background: #334155; padding: 15px 20px; border-radius: 8px; color: #f1f5f9; }
+  .copyright { max-width: 1200px; margin: 25px auto 0 auto; padding-top: 15px; border-top: 1px solid #334155; text-align: center; font-size: 12px; }
+  .kakaomap-wrapper { width: 100%; position: relative; margin-bottom: 20px; }
+  .kakaomap-inner { width: 100%; height: auto; border: 1px solid #ccc; max-width: 1278px; margin: 0 auto; }
+  .kakaomap-inner img { width: 100%; height: auto; max-height: 498px; object-fit: cover; }
+  .kakaomap-bottom { overflow: hidden; padding: 7px 11px; border: 1px solid rgba(0,0,0,0.1); border-top: none; border-radius: 0 0 2px 2px; background-color: #f9f9f9; max-width: 1278px; margin: 0 auto; }
+</style>
+</head>
+<body>
+
+  <!-- LAYER 1 -->
+  <div class="layer-1">
+    <div class="main-banner" onclick="goToHome()" title="홈으로 이동">
+      <h1 id="bannerTitle">(주)엠밸리테크</h1>
+      <p id="bannerSubtitle">세계일류를 꿈꾸는, 능동적이고 적극적인 개척정신</p>
+    </div>
+	<div class="gnb-menu">
+	  <button class="gnb-btn active" onclick="location.href='/category/all'">제품소개</button>
+	  <button class="gnb-btn" onclick="location.href='/board/category/all'">기술자료</button>
+	  <button class="gnb-btn" onclick="location.href='/quote'">견적문의</button>
+	  <button class="gnb-btn" onclick="location.href='/cs'">고객센터</button>
+	  <button class="gnb-btn" onclick="location.href='/about'">회사소개</button>
+	</div>
+  </div>
+
+  <!-- LAYER 2 -->
+  <div class="layer-2">
+	<div id="sub-prod" class="sub-menu-group active">
+      <a href="/category/all" class="sub-btn active">전체</a>
+      <a href="/category/dew" class="sub-btn">노점계</a>
+      <a href="/category/aw" class="sub-btn">수분활성도측정기</a>
+      <a href="/category/moist" class="sub-btn">수분측정기</a>
+      <a href="/category/flow" class="sub-btn">유량계</a>
+      <a href="/category/gasana" class="sub-btn">가스분석기</a>
+      <a href="/category/gasdet" class="sub-btn">가스측정기</a>
+      <a href="/category/temp" class="sub-btn">정밀 온습도계</a>
+    </div>
+	<div id="sub-tech" class="sub-menu-group">
+      <a href="/board/category/all" class="sub-btn">전체</a>
+      <a href="/board/category/general" class="sub-btn">범용 기술자료</a>
+      <a href="/board/category/video" class="sub-btn">동영상 자료</a>
+    </div>
+    <div id="sub-quote" class="sub-menu-group">
+      <button class="sub-btn active" onclick="switchLayer3('quote-form', this)">견적문의 작성</button>
+    </div>
+    <div id="sub-cs" class="sub-menu-group">
+      <button class="sub-btn active" onclick="switchLayer3('cs-notice', this)">공지사항</button>
+    </div>
+    <div id="sub-about" class="sub-menu-group">
+      <button class="sub-btn active" onclick="switchLayer3('about-combined', this)">회사소개</button>
+    </div>
+  </div>
+
+  <!-- LAYER 3 -->
+  <div class="layer-3">
+    <!-- 검색창 -->
+    <div class="search-container" id="searchContainer">
+      <div class="search-box">
+        <select id="searchType" class="search-select" onchange="filterProducts()">
+          <option value="all">통합검색</option>
+          <option value="title">상품명</option>
+          <option value="maker">제조사</option>
+        </select>
+        <input type="text" id="searchInput" class="search-input" placeholder="검색어를 입력하세요..." oninput="filterProducts()">
+      </div>
+    </div>
+
+    <!-- 1차 카테고리 패널 구역 (서버에서 가져온 데이터를 set:html로 미리 박아넣음) -->
+    <div id="prod-all" class="content-panel active"><div class="card-grid" id="grid-전체" set:html={htmlGridAll}></div></div>
+    
+    <div id="prod-dew" class="content-panel">
+      <div class="sub2-menu-box" id="sub2-노점계">
+        <button class="sub2-btn active" onclick="filterSub2('grid-노점계', 'all', this)">All</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-노점계', '휴대용', this)">휴대용</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-노점계', '설치형', this)">설치형</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-노점계', '부식가스용', this)">부식가스용</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-노점계', '판넬', this)">판넬</button>
+      </div>
+      <div class="card-grid" id="grid-노점계" set:html={htmlGridDew}></div>
+    </div>
+
+    <div id="prod-aw" class="content-panel">
+      <div class="sub2-menu-box" id="sub2-수분활성도측정기">
+        <button class="sub2-btn active" onclick="filterSub2('grid-수분활성도측정기', 'all', this)">All</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-수분활성도측정기', '휴대용', this)">휴대용</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-수분활성도측정기', '탁상형', this)">탁상형</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-수분활성도측정기', '습도시약', this)">습도시약 / 샘플케이스</button>
+      </div>
+      <div class="card-grid" id="grid-수분활성도측정기" set:html={htmlGridAw}></div>
+    </div>
+
+    <div id="prod-moist" class="content-panel">
+      <div class="sub2-menu-box" id="sub2-수분측정기">
+        <button class="sub2-btn active" onclick="filterSub2('grid-수분측정기', 'all', this)">All</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-수분측정기', '콘크리트', this)">콘크리트</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-수분측정기', '목재', this)">목재</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-수분측정기', '오일', this)">오일</button>
+      </div>
+      <div class="card-grid" id="grid-수분측정기" set:html={htmlGridMoist}></div>
+    </div>
+
+    <div id="prod-flow" class="content-panel">
+      <div class="sub2-menu-box" id="sub2-유량계">
+        <button class="sub2-btn active" onclick="filterSub2('grid-유량계', 'all', this)">All</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-유량계', '초음파', this)">초음파(외벽부착형)</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-유량계', '인라인', this)">인라인(면적식)</button>
+      </div>
+      <div class="card-grid" id="grid-유량계" set:html={htmlGridFlow}></div>
+    </div>
+
+    <div id="prod-gasana" class="content-panel">
+      <div class="sub2-menu-box" id="sub2-가스분석기">
+        <button class="sub2-btn active" onclick="filterSub2('grid-가스분석기', 'all', this)">All</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '산소', this)">산소(O₂)</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '수분', this)">수분(H₂O) / 중수(D₂O)</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '일산화탄소', this)">일산화탄소(CO)</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '이산화탄소', this)">이산화탄소(CO₂)</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '메탄', this)">메탄(CH₄)</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '암모니아', this)">암모니아(NH₃)</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '특수가스', this)">특수가스</button>
+		<button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '다종가스', this)">다종가스</button>
+		<button class="sub2-btn" onclick="filterSub2('grid-가스분석기', '장비', this)">장비</button>
+      </div>
+      <div class="card-grid" id="grid-가스분석기" set:html={htmlGridGasana}></div>
+    </div>
+
+    <div id="prod-gasdet" class="content-panel">
+      <div class="sub2-menu-box" id="sub2-가스측정기">
+        <button class="sub2-btn active" onclick="filterSub2('grid-가스측정기', 'all', this)">All</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스측정기', '산소', this)">산소</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-가스측정기', '다종가스', this)">다종가스</button>
+      </div>
+      <div class="card-grid" id="grid-가스측정기" set:html={htmlGridGasdet}></div>
+    </div>
+
+    <div id="prod-temp" class="content-panel">
+      <div class="sub2-menu-box" id="sub2-온습도계">
+        <button class="sub2-btn active" onclick="filterSub2('grid-온습도계', 'all', this)">All</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-온습도계', '휴대용', this)">휴대용</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-온습도계', '벽걸이형', this)">벽걸이형</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-온습도계', '프로브', this)">프로브</button><span class="sub2-divider">|</span>
+        <button class="sub2-btn" onclick="filterSub2('grid-온습도계', '데이터로거', this)">온습도 데이터로거</button>
+      </div>
+      <div class="card-grid" id="grid-온습도계" set:html={htmlGridTemp}></div>
+    </div>
+
+    <!-- 게시판 리스트 뷰 -->
+	<div id="tech-all" class="content-panel active">
+      <h2 style="color:#0f4c81; margin-bottom:15px;">전체</h2>
+      <table class="board-table">
+        <thead><tr><th style="width:10%;">분류</th><th>제목</th><th style="width:15%;">작성일</th></tr></thead>
+        <tbody id="boardList-all" set:html={htmlBoardAll}></tbody>
+      </table>
+    </div>	
+	
+    <div id="tech-general" class="content-panel">
+      <h2 style="color:#0f4c81; margin-bottom:15px;">범용 기술자료</h2>
+      <table class="board-table">
+        <thead><tr><th style="width:10%;">분류</th><th>제목</th><th style="width:15%;">작성일</th></tr></thead>
+        <tbody id="boardList-general" set:html={htmlBoardGeneral}></tbody>
+      </table>
+    </div>
+
+    <div id="tech-video" class="content-panel">
+      <h2 style="color:#0f4c81; margin-bottom:15px;">동영상 자료</h2>
+      <table class="board-table">
+        <thead><tr><th style="width:10%;">분류</th><th>제목</th><th style="width:15%;">작성일</th></tr></thead>
+        <tbody id="boardList-video" set:html={htmlBoardVideo}></tbody>
+      </table>
+    </div>
+
+    <div id="cs-notice" class="content-panel">
+      <h2 style="color:#0f4c81; margin-bottom:15px;">공지사항</h2>
+      <table class="board-table">
+        <thead><tr><th style="width:10%;">분류</th><th>제목</th><th style="width:15%;">작성일</th></tr></thead>
+        <tbody id="boardList-notice" set:html={htmlBoardNotice}></tbody>
+      </table>
+    </div>
+
+    <!-- 회사소개 및 견적폼 영역은 기존 0015와 동일 -->
+    <div id="about-combined" class="content-panel">
+      <div style="margin-bottom: 60px;">
+        <h2 style="color:#0f4c81; margin-bottom:20px; border-bottom:2px solid #0f4c81; padding-bottom:10px;">About Us</h2>
+        <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=1200" alt="회사 전경" style="width:100%; height:auto; max-height:400px; object-fit:cover; border-radius:8px; margin-bottom:20px;">
+        <p style="font-size: 16px; color: #334155; line-height: 1.8;">
+          <span style="font-size: 24px; font-weight: 700; color: #1e293b; margin-bottom: 15px; display: block;">인사말</span>
+          <span style="font-size: 18px; font-weight: 700; color: #0f4c81; margin-bottom: 15px; display: block;">당사 홈페이지 방문을 진심으로 환영합니다.</span>
+          (주)엠밸리테크는 "세계일류를 꿈꾸는 능동적이고 적극적인 개척정신"을 모토로 하며,<br>산업용 계측기 및 정밀 분석장비를 전문으로 취급하고 있습니다.<br><br>언제나 고객님과의 신뢰를 바탕으로 최고의 서비스를 제공하겠습니다.
+        </p>
+      </div>
+      <div>
+        <h2 style="color:#0f4c81; margin-bottom:20px; border-bottom:2px solid #0f4c81; padding-bottom:10px;">오시는 길</h2>
+        <div class="kakaomap-wrapper">
+          <div class="kakaomap-inner">
+            <a href="https://map.kakao.com/?urlX=462230.0000000023&amp;urlY=1127467.0000000007&amp;itemId=2083711316&amp;q=%EC%97%A0%EB%B0%B8%EB%A6%AC%ED%85%8C%ED%81%AC" target="_blank">
+              <img src="http://t1.kakaocdn.net/roughmap/imgmap/b15e79770a13fdc3c35e25795168bdac3db7097c3da47e07ae101a4e05d5041b" alt="오시는길 지도">
+            </a>
+          </div>
+          <div class="kakaomap-bottom">
+            <a href="https://map.kakao.com" target="_blank" style="float: left;"><img src="//t1.kakaocdn.net/localimg/localimages/07/2018/pc/common/logo_kakaomap.png" width="72" height="16" alt="카카오맵" style="display:block;width:72px;height:16px"></a>
+            <div style="float: right; position: relative; top: 1px; font-size: 11px;">
+              <a target="_blank" href="https://map.kakao.com/?from=roughmap&amp;srcid=2083711316&amp;confirmid=2083711316&amp;q=%EC%97%A0%EB%B0%B8%EB%A6%AC%ED%85%8C%ED%81%AC&amp;rv=on" style="float:left;height:15px;padding-top:1px;line-height:15px;color:#000;text-decoration: none;">로드뷰</a>
+              <span style="width: 1px;padding: 0;margin: 0 8px 0 9px;height: 11px;vertical-align: top;position: relative;top: 2px;border-left: 1px solid #d0d0d0;float: left;"></span>
+              <a target="_blank" href="https://map.kakao.com/?from=roughmap&amp;eName=%EC%97%A0%EB%B0%B8%EB%A6%AC%ED%85%8C%ED%81%AC&amp;eX=462230.0000000023&amp;eY=1127467.0000000007" style="float:left;height:15px;padding-top:1px;line-height:15px;color:#000;text-decoration: none;">길찾기</a>
+              <span style="width: 1px;padding: 0;margin: 0 8px 0 9px;height: 11px;vertical-align: top;position: relative;top: 2px;border-left: 1px solid #d0d0d0;float: left;"></span>
+              <a target="_blank" href="https://map.kakao.com?map_type=TYPE_MAP&amp;from=roughmap&amp;srcid=2083711316&amp;itemId=2083711316&amp;q=%EC%97%A0%EB%B0%B8%EB%A6%AC%ED%85%8C%ED%81%AC&amp;urlX=462230.0000000023&amp;urlY=1127467.0000000007" style="float:left;height:15px;padding-top:1px;line-height:15px;color:#000;text-decoration: none;">지도 크게 보기</a>
+            </div>
+          </div>
+        </div>
+        <p style="font-size: 15.5px; color: #334155; line-height: 1.8;"><strong>주소:</strong> 서울 강서구 마곡중앙4로 22 (마곡동) 파인스퀘어 A동 907호<br><strong>전화:</strong> 02-2666-7333</p>
+      </div>
+    </div>
+
+    <!-- 견적문의 폼 -->
+    <div id="quote-form" class="content-panel">
+      <h2 style="color:#0f4c81; margin-bottom:25px; border-bottom:2px solid #0f4c81; padding-bottom:10px;">견적문의 작성</h2>
+      <form id="quoteWebForm" onsubmit="submitQuoteToEmail(event)" class="quote-wrap">
+        <h3 style="font-size:16px; margin-bottom:20px; color:#1e293b; border-left:4px solid #0f4c81; padding-left:10px; font-weight:700;">기본정보</h3>
+        <div class="quote-row"><label class="quote-label">이름 *</label><input type="text" id="wName" class="quote-input" required></div>
+        <div class="quote-row"><label class="quote-label">회사명 *</label><input type="text" id="wCompany" class="quote-input" required></div>
+        <div class="quote-row"><label class="quote-label">핸드폰 *</label><input type="tel" id="wPhone" class="quote-input" required placeholder="010-0000-0000"></div>
+        <div class="quote-row"><label class="quote-label">이메일 *</label><input type="email" id="wEmail" class="quote-input" required placeholder="example@email.com"></div>
+        <h3 style="font-size:16px; margin: 25px 0 20px 0; color:#1e293b; border-left:4px solid #0f4c81; padding-left:10px; font-weight:700;">상세정보</h3>
+        <div class="quote-row"><label class="quote-label">모델명</label><input type="text" id="wModel" class="quote-input"></div>
+        <div class="quote-row"><label class="quote-label">용도(예: 실험실 설치)</label><input type="text" id="wUsage" class="quote-input"></div>
+        <div class="quote-row"><label class="quote-label">유체(예: 기체, O2)</label><input type="text" id="wFluid" class="quote-input"></div>
+        <div class="quote-row"><label class="quote-label">온도 및 압력</label><input type="text" id="wFluid" class="quote-input"></div>
+        <div class="quote-row"><label class="quote-label">방폭 or 비방폭</label><input type="text" id="wExp" class="quote-input"></div>
+        <div class="quote-row"><label class="quote-label">수량</label><input type="number" id="wQty" class="quote-input" min="1"></div>
+        <div class="quote-row"><label class="quote-label">기타 문의사항</label><input type="text" id="wContent" class="quote-input" required placeholder="내용을 입력해주세요."></div>
+        
+        <div class="privacy-box">
+          <p style="font-weight:700; color:#1e293b; margin-bottom:8px;">개인정보 취급 방침</p>
+          <div class="privacy-scroll"><strong>수집하는 개인정보의 항목</strong><br>회사는 회원가입, 상담 등을 위해 정보를 수집합니다.<br>- 수집항목 : 이름, 회사명, 핸드폰, 이메일, 내용 등<br><br><strong>개인정보의 수집 및 이용목적</strong><br>- 서비스 제공에 관한 계약 이행 및 요금정산<br>- 물품배송 및 청구지 발송<br><br><strong>개인정보의 보유 및 이용기간</strong><br>목적이 달성된 후에는 예외 없이 지체 없이 파기합니다.</div>
+          <label style="display:flex; align-items:center; cursor:pointer; font-weight:600; color:#1e293b; margin-top:15px;"><input type="checkbox" required style="width:16px; height:16px; margin-right:8px;"> 위 개인정보취급방침에 동의합니다.</label>
+        </div>
+        <button type="submit" id="quoteSubmitBtn" class="quote-submit-btn">견적문의 제출하기</button>
+      </form>
+    </div>
+  </div>
+  
+  <!-- 푸터 -->
+  <footer>
+    <div class="footer-container">
+      <div>
+        <h3 style="color:#f8fafc; font-size:16px; margin-bottom:12px;">(주)엠밸리테크</h3>
+        <p>대표자: 박남순 | 사업자등록번호: 796-81-01792 | 통신판매신고: 2020-서울강서-0422</p>
+        <p>주소: 서울 강서구 마곡중앙4로 22 (마곡동) 파인스퀘어 A동 907호</p>
+        <p>TEL: 02-2666-7333 (평일 09:00~18:00) | EMAIL: mvalley1@naver.com</p>
+      </div>
+      <div class="footer-bank">
+        <h4 style="color:#ffd700; margin-bottom:6px; font-size:14px;">[ 입금 계좌 안내 ]</h4>
+        <p>우리은행 : 1005-803-905935</p>
+        <p>예금주 : (주)엠밸리테크</p>
+      </div>
+    </div>
+    <div class="copyright">Copyright ⓒ (주)엠밸리테크. All Rights Reserved.</div>
+  </footer>
+
+  <!-- Astro의 define:vars를 사용해 빌드 타임의 데이터를 브라우저 팝업용 JS로 통째로 넘겨줍니다. -->
+  <script define:vars={{ globalProducts, globalBoards }}>
+    let currentActivePanelId = 'prod-all';
+
+    function goToHome() {
+      const prodGnbBtn = document.querySelector('.gnb-menu .gnb-btn');
+      if (prodGnbBtn) switchLayer1('prod', prodGnbBtn);
+      const allProdSubBtn = document.querySelector('#sub-prod .sub-btn');
+      if (allProdSubBtn) switchLayer3('prod-all', allProdSubBtn);
+      document.getElementById('searchInput').value = ''; 
+      filterProducts();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function switchLayer1(groupKey, btnEl) {
+      document.querySelectorAll('.gnb-btn').forEach(b => b.classList.remove('active'));
+      btnEl.classList.add('active');
+      document.querySelectorAll('.sub-menu-group').forEach(g => g.classList.remove('active'));
+      const targetSubGroup = document.getElementById('sub-' + groupKey);
+      const searchBox = document.getElementById('searchContainer');
+      if (targetSubGroup) {
+        targetSubGroup.classList.add('active');
+        const firstSubBtn = targetSubGroup.querySelector('.sub-btn');
+        if (firstSubBtn) firstSubBtn.click();
+      }
+      searchBox.style.display = groupKey === 'prod' ? 'flex' : 'none';
+    }
+
+    function switchLayer3(contentId, btnEl) {
+      btnEl.parentElement.querySelectorAll('.sub-btn').forEach(b => b.classList.remove('active'));
+      btnEl.classList.add('active');
+      document.querySelectorAll('.content-panel').forEach(p => p.classList.remove('active'));
+      const targetPanel = document.getElementById(contentId);
+      if (targetPanel) {
+        targetPanel.classList.add('active');
+        currentActivePanelId = contentId;
+        const sub2Box = targetPanel.querySelector('.sub2-menu-box');
+        if (sub2Box) {
+          const firstSub2Btn = sub2Box.querySelector('.sub2-btn');
+          if (firstSub2Btn) firstSub2Btn.click();
+        }
+      }
+    }
+
+    function filterSub2(gridId, category2Keyword, btnEl) {
+      btnEl.parentElement.querySelectorAll('.sub2-btn').forEach(b => b.classList.remove('active'));
+      btnEl.classList.add('active');
+      const cards = document.querySelectorAll(`#${gridId} .card`);
+      const key = category2Keyword.toLowerCase().trim();
+      cards.forEach(card => {
+        const cat2 = (card.getAttribute('data-cat2') || '').toLowerCase();
+        card.style.display = (key === 'all' || cat2.includes(key)) ? 'flex' : 'none';
+      });
+    }
+
+    function filterProducts() {
+      const type = document.getElementById('searchType').value;
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      if (query !== '') {
+        const allBtn = document.querySelector("#sub-prod .sub-btn");
+        if (allBtn && !allBtn.classList.contains('active')) switchLayer3('prod-all', allBtn);
+      }
+      document.querySelectorAll('#grid-전체 .card').forEach(card => {
+        let textToSearch = type === 'title' ? card.getAttribute('data-title') : (type === 'maker' ? card.getAttribute('data-maker') : card.getAttribute('data-all'));
+        card.style.display = (textToSearch || '').includes(query) ? 'flex' : 'none';
+      });
+    }
+
+    function submitQuoteToEmail(event) {
+      event.preventDefault();
+      const btn = document.getElementById('quoteSubmitBtn');
+      btn.innerText = '전송 중...'; btn.disabled = true;
+      const formData = new URLSearchParams();
+      formData.append('name', document.getElementById('wName').value);
+      formData.append('company', document.getElementById('wCompany').value);
+      formData.append('phone', document.getElementById('wPhone').value);
+      formData.append('email', document.getElementById('wEmail').value);
+      formData.append('model', document.getElementById('wModel').value);
+      formData.append('usage', document.getElementById('wUsage').value);
+      formData.append('fluid', document.getElementById('wFluid').value);
+      formData.append('exp', document.getElementById('wExp').value);
+      formData.append('qty', document.getElementById('wQty').value);
+      formData.append('content', document.getElementById('wContent').value);
+      
+      const scriptURL = 'https://script.google.com/macros/s/AKfycbyIgq6G0vCCYu6reZMDV90yBmopMUqo9krv47HLSRX4I3pHIUKKoV4lL_203Zea7zxD/exec';
+      fetch(scriptURL, { method: 'POST', body: formData })
+        .then(() => { alert('견적 문의가 전달되었습니다.'); document.getElementById('quoteWebForm').reset(); })
+        .catch(err => { alert('전송 오류. 전화 문의 부탁드립니다.'); console.error(err); })
+        .finally(() => { btn.innerText = '견적문의 제출하기'; btn.disabled = false; });
+    }
+
+    Object.assign(window, {
+      goToHome,
+      switchLayer1,
+      switchLayer3,
+      filterSub2,
+      filterProducts,
+      submitQuoteToEmail
+    });
+  </script>
+</body>
+</html>

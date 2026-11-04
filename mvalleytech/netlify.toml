@@ -1,0 +1,6 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Astro가 생성한 실제 페이지 경로를 그대로 제공해야 하므로
+# 모든 요청을 /index.html로 보내는 SPA fallback 규칙은 두지 않습니다.

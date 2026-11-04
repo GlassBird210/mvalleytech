@@ -1,0 +1,73 @@
+---
+---
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>(주)엠밸리테크 - 회사소개</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  body { background-color: #f8fafc; color: #333; line-height: 1.6; }
+  .layer-1 { width: 100%; background-color: #ffffff; border-bottom: 2px solid #0f4c81; }
+  .main-banner { width: 100%; height: 250px; background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('https://raw.githubusercontent.com/GlassBird210/mvalleytech/main/mainbanner.jpg') center/cover no-repeat; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; text-align: center; cursor: pointer; }
+  .main-banner h1 { font-size: 42px; font-weight: 500; }
+  .main-banner p { font-size: 24px; font-weight: 300; margin-top: 8px; opacity: 0.9; }
+  .gnb-menu { display: flex; justify-content: center; background-color: #0f4c81; flex-wrap: wrap; }
+  .gnb-btn { padding: 14px 24px; color: #ffffff; background: transparent; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; text-decoration: none; }
+  .gnb-btn:hover, .gnb-btn.active { background-color: #0b3860; color: #ffd700; }
+  .layer-3 { width: 100%; padding: 50px 20px; max-width: 1200px; margin: 0 auto; }
+  .kakaomap-wrapper { width: 100%; position: relative; margin-bottom: 20px; }
+  .kakaomap-inner { width: 100%; height: auto; border: 1px solid #ccc; max-width: 1278px; margin: 0 auto; }
+  .kakaomap-inner img { width: 100%; height: auto; max-height: 498px; object-fit: cover; }
+  .kakaomap-bottom { overflow: hidden; padding: 7px 11px; border: 1px solid rgba(0,0,0,0.1); border-top: none; border-radius: 0 0 2px 2px; background-color: #f9f9f9; max-width: 1278px; margin: 0 auto; }
+  footer { background-color: #1e293b; color: #94a3b8; padding: 40px 20px; font-size: 13px; border-top: 1px solid #334155; text-align: center; margin-top: 50px; }
+</style>
+</head>
+<body>
+  <div class="layer-1">
+    <div class="main-banner" onclick="location.href='/'">
+      <h1>(주)엠밸리테크</h1>
+      <p>세계일류를 꿈꾸는, 능동적이고 적극적인 개척정신</p>
+    </div>
+    <div class="gnb-menu">
+      <button class="gnb-btn" onclick="location.href='/category/all'">제품소개</button>
+      <button class="gnb-btn" onclick="location.href='/board/category/all'">기술자료</button>
+      <button class="gnb-btn" onclick="location.href='/quote'">견적문의</button>
+      <button class="gnb-btn" onclick="location.href='/cs'">고객센터</button>
+      <button class="gnb-btn active" onclick="location.href='/about'">회사소개</button>
+    </div>
+  </div>
+
+  <div class="layer-3">
+    <div style="margin-bottom: 60px;">
+      <h2 style="color:#0f4c81; margin-bottom:20px; border-bottom:2px solid #0f4c81; padding-bottom:10px;">About Us</h2>
+      <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=1200" alt="회사 전경" style="width:100%; height:auto; max-height:400px; object-fit:cover; border-radius:8px; margin-bottom:20px;">
+      <p style="font-size: 16px; color: #334155; line-height: 1.8;">
+        <span style="font-size: 24px; font-weight: 700; color: #1e293b; margin-bottom: 15px; display: block;">인사말</span>
+        <span style="font-size: 18px; font-weight: 700; color: #0f4c81; margin-bottom: 15px; display: block;">당사 홈페이지 방문을 진심으로 환영합니다.</span>
+        (주)엠밸리테크는 "세계일류를 꿈꾸는 능동적이고 적극적인 개척정신"을 모토로 하며,<br>산업용 계측기 및 정밀 분석장비를 전문으로 취급하고 있습니다.<br><br>언제나 고객님과의 신뢰를 바탕으로 최고의 서비스를 제공하겠습니다.
+      </p>
+    </div>
+    <div>
+      <h2 style="color:#0f4c81; margin-bottom:20px; border-bottom:2px solid #0f4c81; padding-bottom:10px;">오시는 길</h2>
+      <div class="kakaomap-wrapper">
+        <div class="kakaomap-inner">
+          <a href="https://map.kakao.com/?urlX=462230.0000000023&amp;urlY=1127467.0000000007&amp;itemId=2083711316&amp;q=%EC%97%A0%EB%B0%B8%EB%A6%AC%ED%85%8C%ED%81%AC" target="_blank">
+            <img src="http://t1.kakaocdn.net/roughmap/imgmap/b15e79770a13fdc3c35e25795168bdac3db7097c3da47e07ae101a4e05d5041b" alt="오시는길 지도">
+          </a>
+        </div>
+        <div class="kakaomap-bottom">
+          <a href="https://map.kakao.com" target="_blank" style="float: left;"><img src="//t1.kakaocdn.net/localimg/localimages/07/2018/pc/common/logo_kakaomap.png" width="72" height="16" alt="카카오맵" style="display:block;width:72px;height:16px"></a>
+        </div>
+      </div>
+      <p style="font-size: 15.5px; color: #334155; line-height: 1.8;"><strong>주소:</strong> 서울 강서구 마곡중앙4로 22 (마곡동) 파인스퀘어 A동 907호<br><strong>전화:</strong> 02-2666-7333</p>
+    </div>
+  </div>
+
+  <footer>
+    <p>Copyright ⓒ (주)엠밸리테크. All Rights Reserved.</p>
+  </footer>
+</body>
+</html>
