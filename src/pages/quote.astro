@@ -90,7 +90,7 @@
       formData.append('qty', document.getElementById('wQty').value);
       formData.append('content', document.getElementById('wContent').value);
       
-      const scriptURL = 'https://script.google.com/macros/s/AKfycbyIgq6G0vCCYu6reZMDV90yBmopMUqo9krv47HLSRX4I3pHIUKKoV4lL_203Zea7zxD/exec';
+      const scriptURL = 'https://script.google.com/macros/s/AKfycbzinEL-lVqECtYp97Cl1GLvgcV0n6YY2fdkK6U7rGfm76pdfvuv43vPqdxIfTfKJwQ/exec';
       fetch(scriptURL, { method: 'POST', body: formData })
         .then(() => { alert('견적 문의가 전달되었습니다.'); document.getElementById('quoteWebForm').reset(); })
         .catch(err => { alert('전송 오류. 전화 문의 부탁드립니다.'); console.error(err); })
