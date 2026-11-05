@@ -232,15 +232,6 @@ bRows.forEach((r, originalIndex) => {
       <a href="/board/category/general" class="sub-btn">범용 기술자료</a>
       <a href="/board/category/video" class="sub-btn">동영상 자료</a>
     </div>
-    <div id="sub-quote" class="sub-menu-group">
-      <button class="sub-btn active" onclick="switchLayer3('quote-form', this)">견적문의 작성</button>
-    </div>
-    <div id="sub-cs" class="sub-menu-group">
-      <button class="sub-btn active" onclick="switchLayer3('cs-notice', this)">공지사항</button>
-    </div>
-    <div id="sub-about" class="sub-menu-group">
-      <button class="sub-btn active" onclick="switchLayer3('about-combined', this)">회사소개</button>
-    </div>
   </div>
 
   <!-- LAYER 3 -->
@@ -359,75 +350,6 @@ bRows.forEach((r, originalIndex) => {
         <thead><tr><th style="width:10%;">분류</th><th>제목</th><th style="width:15%;">작성일</th></tr></thead>
         <tbody id="boardList-video" set:html={htmlBoardVideo}></tbody>
       </table>
-    </div>
-
-    <div id="cs-notice" class="content-panel">
-      <h2 style="color:#0f4c81; margin-bottom:15px;">공지사항</h2>
-      <table class="board-table">
-        <thead><tr><th style="width:10%;">분류</th><th>제목</th><th style="width:15%;">작성일</th></tr></thead>
-        <tbody id="boardList-notice" set:html={htmlBoardNotice}></tbody>
-      </table>
-    </div>
-
-    <!-- 회사소개 및 견적폼 영역은 기존 0015와 동일 -->
-    <div id="about-combined" class="content-panel">
-      <div style="margin-bottom: 60px;">
-        <h2 style="color:#0f4c81; margin-bottom:20px; border-bottom:2px solid #0f4c81; padding-bottom:10px;">About Us</h2>
-        <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=1200" alt="회사 전경" style="width:100%; height:auto; max-height:400px; object-fit:cover; border-radius:8px; margin-bottom:20px;">
-        <p style="font-size: 16px; color: #334155; line-height: 1.8;">
-          <span style="font-size: 24px; font-weight: 700; color: #1e293b; margin-bottom: 15px; display: block;">인사말</span>
-          <span style="font-size: 18px; font-weight: 700; color: #0f4c81; margin-bottom: 15px; display: block;">당사 홈페이지 방문을 진심으로 환영합니다.</span>
-          (주)엠밸리테크는 "세계일류를 꿈꾸는 능동적이고 적극적인 개척정신"을 모토로 하며,<br>산업용 계측기 및 정밀 분석장비를 전문으로 취급하고 있습니다.<br><br>언제나 고객님과의 신뢰를 바탕으로 최고의 서비스를 제공하겠습니다.
-        </p>
-      </div>
-      <div>
-        <h2 style="color:#0f4c81; margin-bottom:20px; border-bottom:2px solid #0f4c81; padding-bottom:10px;">오시는 길</h2>
-        <div class="kakaomap-wrapper">
-          <div class="kakaomap-inner">
-            <a href="https://map.kakao.com/?urlX=462230.0000000023&amp;urlY=1127467.0000000007&amp;itemId=2083711316&amp;q=%EC%97%A0%EB%B0%B8%EB%A6%AC%ED%85%8C%ED%81%AC" target="_blank">
-              <img src="http://t1.kakaocdn.net/roughmap/imgmap/b15e79770a13fdc3c35e25795168bdac3db7097c3da47e07ae101a4e05d5041b" alt="오시는길 지도">
-            </a>
-          </div>
-          <div class="kakaomap-bottom">
-            <a href="https://map.kakao.com" target="_blank" style="float: left;"><img src="//t1.kakaocdn.net/localimg/localimages/07/2018/pc/common/logo_kakaomap.png" width="72" height="16" alt="카카오맵" style="display:block;width:72px;height:16px"></a>
-            <div style="float: right; position: relative; top: 1px; font-size: 11px;">
-              <a target="_blank" href="https://map.kakao.com/?from=roughmap&amp;srcid=2083711316&amp;confirmid=2083711316&amp;q=%EC%97%A0%EB%B0%B8%EB%A6%AC%ED%85%8C%ED%81%AC&amp;rv=on" style="float:left;height:15px;padding-top:1px;line-height:15px;color:#000;text-decoration: none;">로드뷰</a>
-              <span style="width: 1px;padding: 0;margin: 0 8px 0 9px;height: 11px;vertical-align: top;position: relative;top: 2px;border-left: 1px solid #d0d0d0;float: left;"></span>
-              <a target="_blank" href="https://map.kakao.com/?from=roughmap&amp;eName=%EC%97%A0%EB%B0%B8%EB%A6%AC%ED%85%8C%ED%81%AC&amp;eX=462230.0000000023&amp;eY=1127467.0000000007" style="float:left;height:15px;padding-top:1px;line-height:15px;color:#000;text-decoration: none;">길찾기</a>
-              <span style="width: 1px;padding: 0;margin: 0 8px 0 9px;height: 11px;vertical-align: top;position: relative;top: 2px;border-left: 1px solid #d0d0d0;float: left;"></span>
-              <a target="_blank" href="https://map.kakao.com?map_type=TYPE_MAP&amp;from=roughmap&amp;srcid=2083711316&amp;itemId=2083711316&amp;q=%EC%97%A0%EB%B0%B8%EB%A6%AC%ED%85%8C%ED%81%AC&amp;urlX=462230.0000000023&amp;urlY=1127467.0000000007" style="float:left;height:15px;padding-top:1px;line-height:15px;color:#000;text-decoration: none;">지도 크게 보기</a>
-            </div>
-          </div>
-        </div>
-        <p style="font-size: 15.5px; color: #334155; line-height: 1.8;"><strong>주소:</strong> 서울 강서구 마곡중앙4로 22 (마곡동) 파인스퀘어 A동 907호<br><strong>전화:</strong> 02-2666-7333</p>
-      </div>
-    </div>
-
-    <!-- 견적문의 폼 -->
-    <div id="quote-form" class="content-panel">
-      <h2 style="color:#0f4c81; margin-bottom:25px; border-bottom:2px solid #0f4c81; padding-bottom:10px;">견적문의 작성</h2>
-      <form id="quoteWebForm" onsubmit="submitQuoteToEmail(event)" class="quote-wrap">
-        <h3 style="font-size:16px; margin-bottom:20px; color:#1e293b; border-left:4px solid #0f4c81; padding-left:10px; font-weight:700;">기본정보</h3>
-        <div class="quote-row"><label class="quote-label">이름 *</label><input type="text" id="wName" class="quote-input" required></div>
-        <div class="quote-row"><label class="quote-label">회사명 *</label><input type="text" id="wCompany" class="quote-input" required></div>
-        <div class="quote-row"><label class="quote-label">핸드폰 *</label><input type="tel" id="wPhone" class="quote-input" required placeholder="010-0000-0000"></div>
-        <div class="quote-row"><label class="quote-label">이메일 *</label><input type="email" id="wEmail" class="quote-input" required placeholder="example@email.com"></div>
-        <h3 style="font-size:16px; margin: 25px 0 20px 0; color:#1e293b; border-left:4px solid #0f4c81; padding-left:10px; font-weight:700;">상세정보</h3>
-        <div class="quote-row"><label class="quote-label">모델명</label><input type="text" id="wModel" class="quote-input"></div>
-        <div class="quote-row"><label class="quote-label">용도(예: 실험실 설치)</label><input type="text" id="wUsage" class="quote-input"></div>
-        <div class="quote-row"><label class="quote-label">유체(예: 기체, O2)</label><input type="text" id="wFluid" class="quote-input"></div>
-        <div class="quote-row"><label class="quote-label">온도 및 압력</label><input type="text" id="wFluid" class="quote-input"></div>
-        <div class="quote-row"><label class="quote-label">방폭 or 비방폭</label><input type="text" id="wExp" class="quote-input"></div>
-        <div class="quote-row"><label class="quote-label">수량</label><input type="number" id="wQty" class="quote-input" min="1"></div>
-        <div class="quote-row"><label class="quote-label">기타 문의사항</label><input type="text" id="wContent" class="quote-input" required placeholder="내용을 입력해주세요."></div>
-        
-        <div class="privacy-box">
-          <p style="font-weight:700; color:#1e293b; margin-bottom:8px;">개인정보 취급 방침</p>
-          <div class="privacy-scroll"><strong>수집하는 개인정보의 항목</strong><br>회사는 회원가입, 상담 등을 위해 정보를 수집합니다.<br>- 수집항목 : 이름, 회사명, 핸드폰, 이메일, 내용 등<br><br><strong>개인정보의 수집 및 이용목적</strong><br>- 서비스 제공에 관한 계약 이행 및 요금정산<br>- 물품배송 및 청구지 발송<br><br><strong>개인정보의 보유 및 이용기간</strong><br>목적이 달성된 후에는 예외 없이 지체 없이 파기합니다.</div>
-          <label style="display:flex; align-items:center; cursor:pointer; font-weight:600; color:#1e293b; margin-top:15px;"><input type="checkbox" required style="width:16px; height:16px; margin-right:8px;"> 위 개인정보취급방침에 동의합니다.</label>
-        </div>
-        <button type="submit" id="quoteSubmitBtn" class="quote-submit-btn">견적문의 제출하기</button>
-      </form>
     </div>
   </div>
   
